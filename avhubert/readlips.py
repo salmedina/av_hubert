@@ -44,16 +44,16 @@ def extract_roi(input_video_path, output_video_path, face_predictor_path, mean_f
     landmarks = []
     landmark = None
     for frame in tqdm(frames):
-        if len(landmarks) == 0:
-            landmark = detect_landmark(frame, detector, predictor)
+        landmark = detect_landmark(frame, detector, predictor)
         landmarks.append(landmark)
     preprocessed_landmarks = landmarks_interpolate(landmarks)
-    rois = crop_patch(input_video_path, preprocessed_landmarks, mean_face_landmarks, stablePntsIDs, STD_SIZE, 
-                          window_margin=12, start_idx=48, stop_idx=68, crop_height=96, crop_width=96)
+    rois = crop_patch(input_video_path,
+                      preprocessed_landmarks, mean_face_landmarks, stablePntsIDs, STD_SIZE, 
+                      window_margin=12, start_idx=48, stop_idx=68, crop_height=96, crop_width=96)
     write_video_ffmpeg(rois, output_video_path, "/usr/bin/ffmpeg")
 
 
-def predict(video_path: str, ckpt_path: str):
+def predict(video_path: str, ckpt_path: str, beam_sz: int=20, beam_len: int=20):
     num_frames = int(cv2.VideoCapture(video_path).get(cv2.CAP_PROP_FRAME_COUNT))
     tmp_dir = tempfile.mkdtemp()
     tsv_cont = ["/\n", f"test-0\t{video_path}\t{None}\t{num_frames}\t{int(16_000*num_frames/25)}\n"]
@@ -65,7 +65,8 @@ def predict(video_path: str, ckpt_path: str):
 
     modalities = ["video"]
     gen_subset = "test"
-    gen_cfg = GenerationConfig(beam=20)
+    gen_cfg = GenerationConfig(beam=beam_sz,
+                               max_len_b=beam_len)
     models, saved_cfg, task = checkpoint_utils.load_model_ensemble_and_task([ckpt_path])
     models = [model.eval().cuda() for model in models]
     saved_cfg.task.modalities = modalities
@@ -95,9 +96,12 @@ def predict(video_path: str, ckpt_path: str):
     return decoded_hypos
 
 
-def read_lips(roi_path, ckpt_path, output_path):
+def read_lips(roi_path, ckpt_path, output_path, beam_sz: int=20, beam_len: int=20):
     
-    hypos = predict(roi_path.__str__(), ckpt_path.__str__())
+    hypos = predict(roi_path.__str__(),
+                    ckpt_path.__str__(),
+                    beam_sz=beam_sz,
+                    beam_len=beam_len)
     
     print(f'Hypothesis:')
     output_lines = list()
@@ -111,13 +115,18 @@ def read_lips(roi_path, ckpt_path, output_path):
 
 
 if __name__ == '__main__':
-    ckpt_path = Path("/home/zal/Devel/av_hubert/data/finetune-model.pt")
-    face_predictor_path = "/home/zal/Devel/av_hubert/data/misc/shape_predictor_68_face_landmarks.dat"
-    mean_face_path = "/home/zal/Devel/av_hubert/data/misc/20words_mean_face.npy"
+    beam_size = 10
+    beam_length = 20
 
-    videos_dir = Path("/mnt/Alfheim/Data/SpeechAnimation/Renders/videos/25fps")
-    rois_dir = Path("/mnt/Alfheim/Data/SpeechAnimation/Renders/videos/rois")
-    output_dir = Path("/mnt/Alfheim/Data/SpeechAnimation/Renders/vsr/tsv")
+    ckpt_path = Path("/home/salmedina/Devel/GH/av_hubert/data/finetune-model.pt")
+    face_predictor_path = "/home/salmedina/Devel/GH/av_hubert/data/misc/shape_predictor_68_face_landmarks.dat"
+    mean_face_path = "/home/salmedina/Devel/GH/av_hubert/data/misc/20words_mean_face.npy"
+
+    videos_dir = Path("/mnt/local/salmedina/Data/Renders/videos/25fps")
+    rois_dir = Path("/mnt/local/salmedina/Data/Renders/videos/rois/video")
+    output_dir = Path(f"/mnt/local/salmedina/Data/Renders/vsr/tsv_b{beam_size}_l{beam_length}")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     for video_path in videos_dir.glob("*.mp4"):
         sample_name = video_path.stem
@@ -125,13 +134,16 @@ if __name__ == '__main__':
         output_path = output_dir / f"{sample_name}.tsv"
         if not output_path.exists():
             print(f"Processing {sample_name}")
-            extract_roi(video_path.__str__(),
-                        roi_path,
-                        face_predictor_path,
-                        mean_face_path)
-            read_lips(roi_path,
-                      ckpt_path,
-                      output_path)
+            if not roi_path.exists():
+                extract_roi(video_path.__str__(),
+                            roi_path,
+                            face_predictor_path,
+                            mean_face_path)
+        read_lips(roi_path,
+                    ckpt_path,
+                    output_path,
+                    beam_sz=beam_size,
+                    beam_len=beam_length)
     
     # extract_roi(video_path, roi_path, face_predictor_path, mean_face_path)
     # read_lips(roi_path, ckpt_path, output_path)
