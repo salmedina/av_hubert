@@ -49,6 +49,7 @@ if __name__ == '__main__':
         sub_fids = fids[rank*num_per_shard: (rank+1)*num_per_shard]
         if len(sub_fids) > 0:
             fids_arr.append(sub_fids)
+    
     if args.rank >= len(fids_arr):
         open(f"{args.root}/nframes.audio.{args.rank}", 'w').write('')
         open(f"{args.root}/nframes.video.{args.rank}", 'w').write('')
