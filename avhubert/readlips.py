@@ -1,5 +1,6 @@
 import shutil
 import tempfile
+# import argparse
 from argparse import Namespace
 from base64 import b64encode
 from pathlib import Path
@@ -19,6 +20,7 @@ from tqdm import tqdm
 import fairseq
 from fairseq import checkpoint_utils, options, tasks, utils
 from fairseq.dataclass.configs import GenerationConfig
+from easydict import EasyDict as edict
 
 
 def detect_landmark(image, detector, predictor):
@@ -115,16 +117,20 @@ def read_lips(roi_path, ckpt_path, output_path, beam_sz: int=20, beam_len: int=2
 
 
 if __name__ == '__main__':
-    beam_size = 10
+
+    args = edict(run_name='bright-rain-92',
+                 epoch=8)
+
+    beam_size = 20
     beam_length = 20
 
     ckpt_path = Path("/home/salmedina/Devel/GH/av_hubert/data/finetune-model.pt")
     face_predictor_path = "/home/salmedina/Devel/GH/av_hubert/data/misc/shape_predictor_68_face_landmarks.dat"
     mean_face_path = "/home/salmedina/Devel/GH/av_hubert/data/misc/20words_mean_face.npy"
 
-    videos_dir = Path("/mnt/local/salmedina/Data/Renders/videos/25fps")
-    rois_dir = Path("/mnt/local/salmedina/Data/Renders/videos/rois/video")
-    output_dir = Path(f"/mnt/local/salmedina/Data/Renders/vsr/tsv_b{beam_size}_l{beam_length}")
+    videos_dir = Path(f"/mnt/local/salmedina/Output/VSR/lrs3_test/videos/{args.run_name}-{args.epoch}/25fps")
+    rois_dir = Path(f"/mnt/local/salmedina/Output/VSR/lrs3_test/rois/{args.run_name}-{args.epoch}")
+    output_dir = Path(f"/mnt/local/salmedina/Output/VSR/lrs3_test/vsr/{args.run_name}-{args.epoch}/tsv")
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -139,11 +145,8 @@ if __name__ == '__main__':
                             roi_path,
                             face_predictor_path,
                             mean_face_path)
-        read_lips(roi_path,
-                    ckpt_path,
-                    output_path,
-                    beam_sz=beam_size,
-                    beam_len=beam_length)
-    
-    # extract_roi(video_path, roi_path, face_predictor_path, mean_face_path)
-    # read_lips(roi_path, ckpt_path, output_path)
+            read_lips(roi_path,
+                        ckpt_path,
+                        output_path,
+                        beam_sz=beam_size,
+                        beam_len=beam_length)
