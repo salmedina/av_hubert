@@ -3,9 +3,8 @@ from utils.text import normalize_text
 
 
 if __name__ == '__main__':
-    train_wrd_path = Path('/mnt/local/salmedina/Data/Renders/videos/rois/train.wrd')
-    train_wrd_path = Path('/home/salmedina/Devel/GH/av_hubert/lrs3.wrd')
-    test_wrd_path = Path('/mnt/local/salmedina/Data/Renders/videos/rois/valid.wrd')
+    train_wrd_path = Path('/home/zal/Devel/av_hubert/lrs3.wrd')
+    test_wrd_path = Path('/home/zal/Devel/av_hubert/spm_unigram_1000_test.wrd')
 
     def get_vocab(transcript_path):
         with open(transcript_path) as wrd_file:
