@@ -1,3 +1,4 @@
+import argparse
 from pathlib import Path
 from utils.metrics import calc_cer
 from utils.text import normalize_text
@@ -17,19 +18,30 @@ def load_transcript(path, type):
     return ref_dict
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-e', '--epoch', type=int,
+                        help='Epoch number to be processed')
+    parser.add_argument('-r', '--run_name', type=str, default='bright-rain-92',
+                        help='Name of the run to be processed')
+    return parser.parse_args()
+
+
 def main():
+    args = parse_args()
+    epoch = args.epoch
+    run_name = args.run_name
+
     transcripts = edict(imt=edict(path='/mnt/local/salmedina/Data/Processed/index/transcripts.csv',
-                            type='imt'),
+                                  type='imt'),
                         lrs3=edict(path='/mnt/local/salmedina/Data/LRS3/test_index.tsv',
-                             type='lrs3'))
+                                  type='lrs3'))
 
     ref_dict = load_transcript(path=transcripts.lrs3.path,
                                type=transcripts.lrs3.type)
 
-    vsr_dir = Path('/mnt/local/salmedina/Data/Renders/vsr/original_tsv')
-    wer_dir = Path('/mnt/local/salmedina/Data/Renders/vsr/cer_b40_l200')
-    vsr_dir = Path('/mnt/local/salmedina/Output/VSR/lrs3_test/vsr/bright-rain-92-3/tsv')
-    cer_dir = Path('/mnt/local/salmedina/Output/VSR/lrs3_test/vsr/bright-rain-92-3/cer')
+    vsr_dir = Path(f'/mnt/local/salmedina/Output/VSR/lrs3_test/vsr/{run_name}-{epoch}/tsv')
+    cer_dir = Path(f'/mnt/local/salmedina/Output/VSR/lrs3_test/vsr/{run_name}-{epoch}/cer')
 
     cer_dir.mkdir(parents=True, exist_ok=True)
 
