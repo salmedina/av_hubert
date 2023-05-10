@@ -1,22 +1,38 @@
 from jiwer import cer as calc_cer
 from pathlib import Path
 from utils.text import normalize_text
+from easydict import EasyDict as edict
+
+
+def load_transcript(path, type):
+    ref_dict = dict()
+    if type == 'imt':
+        for entry in [l.strip().split('\t') for l in open(path).readlines()][1:]:
+            ref_dict[entry[0]] = entry[1]
+    elif type == 'lrs3':
+        for entry in [l.strip().split('\t') for l in open(path).readlines()]:
+            key = entry[0].replace('/', '_')
+            ref_dict[key] = entry[2]
+
+    return ref_dict
 
 
 def main():
-    ref_path = '/mnt/local/salmedina/Data/Processed/index/transcripts.csv'
-    ref_dict = dict()
-    for entry in [l.strip().split('\t') for l in open(ref_path).readlines()][1:]:
-        ref_dict[entry[0]] = entry[1]
+    transcripts = edict(imt=edict(path='/mnt/local/salmedina/Data/Processed/index/transcripts.csv',
+                            type='imt'),
+                        lrs3=edict(path='/mnt/local/salmedina/Data/LRS3/test_index.tsv',
+                             type='lrs3'))
 
-    vsr_dir = Path('/mnt/local/salmedina/Data/Renders/vsr/original_tsv')
-    vsr_dir = Path('/mnt/local/salmedina/Data/Renders/vsr/tsv_b40_l200')
-    wer_dir = Path('/mnt/local/salmedina/Data/Renders/vsr/cer_b40_l200')
+    ref_dict = load_transcript(path=transcripts.lrs3.path,
+                               type=transcripts.lrs3.type)
 
-    wer_dir.mkdir(parents=True, exist_ok=True)
+    vsr_dir = Path('/mnt/local/salmedina/Output/VSR/lrs3_test/vsr/bright-rain-92-3/tsv')
+    cer_dir = Path('/mnt/local/salmedina/Output/VSR/lrs3_test/vsr/bright-rain-92-3/cer')
+
+    cer_dir.mkdir(parents=True, exist_ok=True)
 
     for tsv_path in vsr_dir.glob('*.tsv'):
-        output_path = wer_dir / tsv_path.name
+        output_path = cer_dir / tsv_path.name
         lines = list()
         lines.append('\t'.join(['score', 'cer', 'hyp']))
 
