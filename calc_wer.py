@@ -1,6 +1,5 @@
-import argparse
-from jiwer import wer as calc_wer
 from pathlib import Path
+from utils.metrics import calc_wer
 from utils.text import normalize_text
 from easydict import EasyDict as edict
 
@@ -55,7 +54,8 @@ def main():
             ref = normalize_text(ref_dict[sid])
             hyp = normalize_text(pred[1])
 
-            lines.append('\t'.join([pred[0], f'{calc_wer(ref, hyp):.05f}', pred[1]]))
+            metrics = calc_wer(ref, hyp)
+            lines.append('\t'.join([pred[0], f'{metrics.wer:.05f}', pred[1]]))
         
         with open(output_path, 'w') as output_file:
             output_file.write('\n'.join(lines))
