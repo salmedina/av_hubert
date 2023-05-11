@@ -1,6 +1,6 @@
 import argparse
 from pathlib import Path
-from utils.metrics import calc_cer
+from utils.metrics import calc_cer, calc_wer
 from utils.text import normalize_text
 from easydict import EasyDict as edict
 
@@ -27,10 +27,16 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
-    args = parse_args()
+def main(args):
     epoch = args.epoch
     run_name = args.run_name
+    metric = args.metric
+
+    assert metric in ['cer', 'wer'], f'Metric has to be wer or cer'
+    if metric == 'wer':
+        calc_metric_func = calc_wer
+    elif metric == 'cer'
+        calc_metric_func = calc_cer
 
     transcripts = edict(imt=edict(path='/mnt/local/salmedina/Data/Processed/index/transcripts.csv',
                                   type='imt'),
@@ -41,21 +47,21 @@ def main():
                                type=transcripts.lrs3.type)
 
     vsr_dir = Path(f'/mnt/local/salmedina/Output/VSR/lrs3_test/vsr/{run_name}-{epoch}/tsv')
-    cer_dir = Path(f'/mnt/local/salmedina/Output/VSR/lrs3_test/vsr/{run_name}-{epoch}/cer')
+    output_dir = Path(f'/mnt/local/salmedina/Output/VSR/lrs3_test/vsr/{run_name}-{epoch}/{metric}')
 
-    cer_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     for tsv_path in vsr_dir.glob('*.tsv'):
-        output_path = cer_dir / tsv_path.name
+        output_path = output_dir / tsv_path.name
         lines = list()
-        lines.append('\t'.join(['score', 'cer', 'hits', 'sub', 'ins', 'del','hyp']))
+        lines.append('\t'.join(['score', metric, 'hits', 'sub', 'ins', 'del', 'hyp', 'ref']))
 
         for pred in [l.strip().split('\t') for l in open(tsv_path).readlines()]:    
             sid = tsv_path.stem
             ref = normalize_text(ref_dict[sid])
             hyp = normalize_text(pred[1])
 
-            metrics = calc_cer(ref, hyp)
+            metrics = calc_metric_func(ref, hyp)
 
             lines.append('\t'.join([pred[0],
                                     f'{metrics.cer:.05f}',
@@ -63,11 +69,13 @@ def main():
                                     f'{metrics.substitutions}',
                                     f'{metrics.insertions}',
                                     f'{metrics.deletions}',
-                                    pred[1]]))
+                                    hyp,
+                                    ref]))
         
         with open(output_path, 'w') as output_file:
             output_file.write('\n'.join(lines))
 
 
 if __name__ == '__main__':
-    main()
+    args = parse_args()
+    main(args)
